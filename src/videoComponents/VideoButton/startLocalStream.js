@@ -23,7 +23,7 @@ const startLocalStream = (streams, dispatch) => {
       // 获取本地流的所有视频轨道，并将它们添加到当前远程对等连接中
       // 这样远程端就能接收到本地视频
       localStream.stream.getVideoTracks().forEach((t) => {
-        curStream.peerConnection.addTrack(t, curStream.stream)
+        curStream.peerConnection.addTrack(t, streams.localStream.stream)
       })
 
       // 更新 Redux 状态，标记视频已启用

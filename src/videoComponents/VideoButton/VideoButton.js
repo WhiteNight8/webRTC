@@ -6,7 +6,10 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import startLocalStream from "./startLocalStream"
-
+import updateCallStatus from "../../redux-elements/actions/updateCallStatus"
+import addStream from "../../redux-elements/actions/addStream"
+import getDevices from "../../webRTCutilities/getDevices"
+import ActionButtonCaretDropDown from "../ActionButtonCaretDropDown"
 /**
  * VideoButton 组件
  * @param {Object} props - 组件属性
@@ -14,12 +17,39 @@ import startLocalStream from "./startLocalStream"
  */
 const VideoButton = ({ smallFeedEl }) => {
   // 从 Redux store 获取通话状态和流信息
+  const dispatch = useDispatch()
   const callStatus = useSelector((state) => state.callStatus)
   const streams = useSelector((state) => state.streams)
-  const dispatch = useDispatch()
-
   // 标记是否有待处理的更新（当媒体尚未准备好时）
   const [pendingUpdate, setPendingUpdate] = useState(false)
+  const [caretOpen, setCaretOpen] = useState(false)
+  const [videoDevicesList, setVideoDevicesList] = useState([])
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      if (caretOpen) {
+        const devices = await getDevices()
+        setVideoDevicesList(devices.videoDevices)
+      }
+    }
+    fetchDevices()
+  }, [caretOpen])
+
+  const changeVideoDevice = async (e) => {
+    const deviceId = e.target.value
+    const newConstraints = {
+      audio: callStatus.audio === "default" ? true : false,
+      video: {
+        deviceId: { exact: deviceId },
+      },
+    }
+    const stream = await navigator.mediaDevices.getUserMedia(newConstraints)
+
+    dispatch(updateCallStatus("videoDevice", deviceId))
+    dispatch(updateCallStatus("video", "enabled"))
+    smallFeedEl.current.srcObject = stream
+    dispatch(addStream("localStream", stream))
+  }
 
   /**
    * 启动或停止视频流
@@ -28,18 +58,24 @@ const VideoButton = ({ smallFeedEl }) => {
    */
   const startStopVideo = () => {
     // 检查是否已获取媒体权限且本地流已存在
-    if (
-      callStatus.haveMedia &&
-      streams.localStream &&
-      streams.localStream.stream
-    ) {
-      // 将本地视频流设置到小窗口预览元素
+    if (callStatus.video === "enabled") {
+      dispatch(updateCallStatus("video", "disabled"))
+
+      const tracks = streams.localStream.stream.getVideoTracks()
+      tracks.forEach((t) => {
+        t.enabled = false
+      })
+    } else if (callStatus.video === "disabled") {
+      dispatch(updateCallStatus("video", "enabled"))
+      const tracks = streams.localStream.stream.getVideoTracks()
+      tracks.forEach((t) => {
+        t.enabled = true
+      })
+    } else if (callStatus.hasMedia) {
       smallFeedEl.current.srcObject = streams.localStream.stream
 
-      // 启动本地流，将视频轨道添加到所有对等连接
       startLocalStream(streams, dispatch)
     } else {
-      // 媒体尚未准备好，标记为待更新
       setPendingUpdate(true)
     }
   }
@@ -53,19 +89,32 @@ const VideoButton = ({ smallFeedEl }) => {
       setPendingUpdate(false)
       // 将本地视频流设置到预览窗口
       smallFeedEl.current.srcObject = streams.localStream.stream
+      startLocalStream(streams, dispatch)
     }
-  }, [pendingUpdate, callStatus.haveMedia])
+  }, [pendingUpdate, callStatus.haveMedia, dispatch, smallFeedEl, streams])
 
   return (
     <div className="button-wrapper video-button d-inline-block">
-      <i className="fa fa-caret-up choose-video"></i>
+      <i
+        className="fa fa-caret-up choose-video"
+        onClick={() => setCaretOpen(!caretOpen)}
+      ></i>
       <div className="button camera" onClick={startStopVideo}>
         <i className="fa fa-video"></i>
         <div className="btn-text">
           {/* 根据视频状态显示 "Stop" 或 "Start" */}
-          {callStatus.video === "display" ? "Stop" : "Start"} Video
+          {callStatus.video === "enabled" ? "Stop" : "Start"} Video
         </div>
       </div>
+      {caretOpen ? (
+        <ActionButtonCaretDropDown
+          defaultValue={callStatus.videoDevice || "default"}
+          changeHandler={changeVideoDevice}
+          devicesList={videoDevicesList}
+        />
+      ) : (
+        <></>
+      )}
     </div>
   )
 }
