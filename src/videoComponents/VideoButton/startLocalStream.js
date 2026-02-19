@@ -15,7 +15,7 @@ const startLocalStream = (streams, dispatch) => {
   const localStream = streams.localStream
 
   // 遍历所有流对象（包括本地流和远程流）
-  for (const s of streams) {
+  for (const s of Object.keys(streams)) {
     // 跳过本地流，只处理远程流
     if (s !== "localStream") {
       const curStream = streams[s]
