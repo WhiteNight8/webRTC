@@ -40,7 +40,7 @@ webRTC/
 │   │   │   ├── reducers/         # callStatus、streams、rootReducer
 │   │   │   └── actions/          # addStream、updateCallStatus
 │   │   ├── webRTCutilities/      # createPeerConnection、stunServer、socketConnect
-│   │   └── videoComponents/      # MainVideoPage、CallInfo、ChatWindow、ActionButton 等
+│   │   └── videoComponents/      # MainVideoPage、CallInfo、ChatWindow、ActionButton、AudioButton、VideoButton、startAudioStream 等
 │   └── package.json
 ├── telelegaL-back-end/           # Node 后端（信令 + API）
 │   ├── server.js                 # HTTPS + Express + Socket.IO
@@ -94,7 +94,7 @@ npm start
 2. **媒体与连接**：页面请求摄像头（getUserMedia），创建 `RTCPeerConnection`（STUN：Google），将本地流与远程流写入 Redux。
 3. **预约校验**：前端把 `token` 发给 `POST /validate-link`，后端 JWT 验证后返回预约信息（专业人员、时间等），用于 CallInfo 展示。
 4. **信令**：通过 Socket.IO 连接 `https://localhost:9000`，用于后续交换 SDP offer/answer 与 ICE 候选（当前代码中 ICE 发送为 TODO）。
-5. **控制**：视频开/关、音频加入/静音、挂断等通过 Redux 与 `startLocalStream` 等逻辑更新状态与轨道。
+5. **控制**：视频开/关、音频加入/静音、挂断等通过 Redux 与 `startLocalStream`、`startAudioStream` 等逻辑更新状态与轨道。
 
 ---
 
@@ -103,6 +103,8 @@ npm start
 - **MainVideoPage**：挂载时拉流、建连、校验 token；渲染大小窗口（远程/本地）、CallInfo、ChatWindow、ActionButtons。
 - **createPeerConnection**：封装 `RTCPeerConnection`、STUN 配置、`signalingstatechange` / `icecandidate` 监听。
 - **startLocalStream**：把本地视频轨道加到各远程对等连接的 `peerConnection` 上。
+- **startAudioStream**：把本地音频轨道 addTrack 到各远程 peerConnection，用于首次加入音频。
+- **AudioButton**：音频加入/静音/取消静音；设备切换（麦克风、扬声器）；与 VideoButton 类似，通过 Redux 更新 callStatus 与 streams。
 - **Redux**：`streams` 存 localStream/remote1… 及对应 `peerConnection`；`callStatus` 存 current、video、audio、haveMedia 等。
 
 ---

@@ -52,11 +52,13 @@
 | 视频页 | `MainVideoPage.js` | 挂载时 getUserMedia、createPeerConnection、addStream；请求 `/validate-link` 拿预约信息；渲染大小窗口、CallInfo、ChatWindow、ActionButtons。 |
 | 对等连接 | `createPeerConnection.js` | 使用 STUN 配置创建 RTCPeerConnection，监听 signalingstatechange、icecandidate，返回 peerConnection + remoteStream。 |
 | 本地流共享 | `startLocalStream.js` | 将本地流的视频轨道通过 `addTrack` 加到各个远程 peerConnection 上。 |
+| 本地音频共享 | `startAudioStream.js` | 将本地流的音频轨道通过 `addTrack` 加到各个远程 peerConnection 上；用于首次点击「Join Audio」。 |
 | 信令连接 | `socketConnect.js` | Socket.IO 客户端连接 `https://localhost:9000`，供后续 SDP/ICE 交换使用。 |
 | STUN 配置 | `stunServer.js` | 提供 `iceServers`（如 stun.l.google.com:19302）。 |
 | 流状态 | `streamsReducer.js` | 存储 `localStream`、`remote1`… 及对应 MediaStream、RTCPeerConnection。 |
 | 通话状态 | `callStatusReducer.js` | current、video、audio、haveMedia、shareScreen 等。 |
 | 操作栏 | `ActionButton.js` | 整合音频、视频、参与者、聊天、屏幕共享、挂断；鼠标移动显示/4 秒无操作隐藏。 |
+| 音频按钮 | `AudioButton.js` | Join Audio / Mute / Unmute；设备切换（麦克风、扬声器）；调用 startAudioStream、changeAudioDevice。 |
 
 ### 3.2 后端核心模块
 
@@ -75,7 +77,12 @@
    - 用户点“Start/Stop Video”。  
    - VideoButton 从 Redux 取 streams、callStatus；若有 haveMedia 和 localStream，则把 `streams.localStream.stream` 设到 smallFeedEl，并调用 `startLocalStream(streams, dispatch)` 把本地视频轨道 addTrack 到各 remote 的 peerConnection，同时 dispatch `updateCallStatus('video', 'enabled')`。
 
-3. **挂断**  
+3. **音频加入/静音**  
+   - 用户点「Join Audio」。  
+   - AudioButton 调用 `changeAudioDevice({ target: { value: "input-default" } })` 获取默认麦克风流，`addStream('localStream', stream)` 写入 Redux，再调用 `startAudioStream(streams, dispatch)` 把本地音频轨道 addTrack 到各 remote 的 peerConnection，dispatch `updateCallStatus('audio', 'enabled')`。  
+   - 静音：将音频轨道的 `enabled` 设为 false；取消静音：设回 true，并 dispatch 更新状态。
+
+4. **挂断**  
    - HangupButton 里 dispatch `updateCallStatus('current', 'complete')`，通话状态变为完成，按钮根据 callStatus.current 隐藏。
 
 ---
