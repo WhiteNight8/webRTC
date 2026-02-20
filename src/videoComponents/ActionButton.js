@@ -67,7 +67,7 @@ const ActionButtons = ({ openCloseChat, smallFeedEl }) => {
     <div id="menu-buttons" ref={menuButtons} className="row">
       {/* 左侧按钮组：音频和视频控制 */}
       <div className="left col-2">
-        <AudioButton />
+        <AudioButton smallFeedEl={smallFeedEl} />
         <VideoButton smallFeedEl={smallFeedEl} />
       </div>
 

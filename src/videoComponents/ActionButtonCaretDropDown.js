@@ -22,7 +22,7 @@ const ActionButtonCaretDropDown = ({
       .map((d, i) => (
         <option
           key={`audioinput-${d.deviceId || "device"}-${i}`}
-          value={d.deviceId || ""}
+          value={`audioinput-${d.deviceId || "default"}`}
         >
           {d.label || `Audio input ${i + 1}`}
         </option>
@@ -33,7 +33,7 @@ const ActionButtonCaretDropDown = ({
       .map((d, i) => (
         <option
           key={`audiooutput-${d.deviceId || "device"}-${i}`}
-          value={d.deviceId || ""}
+          value={`audiooutput-${d.deviceId || "default"}`}
         >
           {d.label || `Audio output ${i + 1}`}
         </option>

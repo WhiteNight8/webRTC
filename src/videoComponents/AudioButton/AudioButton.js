@@ -5,41 +5,108 @@
  */
 
 import { useEffect, useState } from "react"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch, useStore } from "react-redux"
 import getDevices from "../../webRTCutilities/getDevices"
 import ActionButtonCaretDropDown from "../ActionButtonCaretDropDown"
+import addStream from "../../redux-elements/actions/addStream"
+import updateCallStatus from "../../redux-elements/actions/updateCallStatus"
+import startAudioStream from "./startAudioStream"
 
-const AudioButton = () => {
-  // 从 Redux store 获取通话状态
+/**
+ * AudioButton 组件
+ * @param {Object} props - 组件属性
+ * @param {Object} props.smallFeedEl - React ref，指向小窗口视频元素（用于显示本地音频流预览）
+ */
+const AudioButton = ({ smallFeedEl }) => {
+  // 从 Redux store 获取通话状态和流
   const callStatus = useSelector((state) => state.callStatus)
+  const streams = useSelector((state) => state.streams)
+  const dispatch = useDispatch()
+  const store = useStore()
+  // caretOpen：控制设备下拉列表的展开/收起
   const [caretOpen, setCaretOpen] = useState(false)
+  // audioDevicesList：麦克风和扬声器设备列表
   const [audioDevicesList, setAudioDevicesList] = useState([])
 
   /**
-   * 根据通话状态确定按钮显示的文本
-   * - 空闲状态：显示 "Join Audio"（加入音频）
+   * 根据音频状态确定按钮显示的文本
    * - 音频已启用：显示 "Mute"（静音）
    * - 音频已静音：显示 "Unmute"（取消静音）
+   * - 未加入音频（off）：显示 "Join Audio"（加入音频）
    */
   let micText
-  if (callStatus.current === "idle") {
-    micText = "Join Audio"
-  } else if (callStatus.audio) {
+  if (callStatus.audio === "enabled") {
     micText = "Mute"
-  } else {
+  } else if (callStatus.audio === "disabled") {
     micText = "Unmute"
+  } else {
+    micText = "Join Audio"
   }
 
-  const changeAudioDevice = async (e) => {
-    const deviceId = e.target.value
-    const newConstraints = {
-      audio: {
-        deviceId: { exact: deviceId },
-      },
+  /**
+   * 开启/关闭音频：静音、取消静音或首次加入音频
+   * - 已启用：关闭音频轨道（静音）
+   * - 已静音：重新启用音频轨道（取消静音）
+   * - 未加入：使用默认麦克风加入音频，并 addTrack 到各 remote peerConnection
+   */
+  const startStopAudio = () => {
+    if (callStatus.audio === "enabled") {
+      // 静音：关闭音频轨道
+      dispatch(updateCallStatus("audio", "disabled"))
+      const tracks = streams?.localStream?.stream?.getAudioTracks() ?? []
+      tracks.forEach((t) => {
+        t.enabled = false
+      })
+    } else if (callStatus.audio === "disabled") {
+      // 取消静音：重新启用音频轨道
+      dispatch(updateCallStatus("audio", "enabled"))
+      const tracks = streams?.localStream?.stream?.getAudioTracks() ?? []
+      tracks.forEach((t) => {
+        t.enabled = true
+      })
+    } else {
+      // 首次加入音频：使用默认麦克风获取流，addTrack 到各 remote，并更新状态
+      // value 格式需与 ActionButtonCaretDropDown 一致：audioinput-{deviceId}
+      // 必须 await：startAudioStream 需要 Redux 中已更新的 localStream（含音频轨道）
+      ;(async () => {
+        await changeAudioDevice({ target: { value: "audioinput-default" } })
+        const latestStreams = store.getState().streams
+        startAudioStream(latestStreams, dispatch)
+      })()
     }
-    const stream = await navigator.mediaDevices.getUserMedia(newConstraints)
   }
 
+  /**
+   * 切换音频设备（麦克风或扬声器）
+   * - audiooutput：调用 setSinkId 切换扬声器
+   * - audioinput：getUserMedia 获取新麦克风流，更新 Redux 与预览
+   */
+  const changeAudioDevice = async (e) => {
+    if (!smallFeedEl?.current) return
+    const value = e.target.value
+    const dashIdx = value.indexOf("-")
+    const audioType = value.slice(0, dashIdx)
+    const deviceId = value.slice(dashIdx + 1)
+    if (audioType === "audiooutput") {
+      await smallFeedEl.current.setSinkId(deviceId)
+    } else if (audioType === "audioinput") {
+      // 获取指定麦克风的音频流，更新预览与 Redux
+      // deviceId 为 "default" 或空时用 audio: true，兼容各浏览器（不保证有字面量 "default" 的设备 ID）
+      const newConstraints = {
+        audio:
+          deviceId && deviceId !== "default"
+            ? { deviceId: { exact: deviceId } }
+            : true,
+      }
+      const stream = await navigator.mediaDevices.getUserMedia(newConstraints)
+      smallFeedEl.current.srcObject = stream
+      dispatch(updateCallStatus("audioDevice", deviceId))
+      dispatch(updateCallStatus("audio", "enabled"))
+      dispatch(addStream("localStream", stream))
+    }
+  }
+
+  // 当 caret 展开时拉取麦克风/扬声器列表供下拉选择
   useEffect(() => {
     const fetchDevices = async () => {
       if (caretOpen) {
@@ -58,13 +125,13 @@ const AudioButton = () => {
         className="fa fa-caret-up choose-audio"
         onClick={() => setCaretOpen(!caretOpen)}
       ></i>
-      <div className="button mic">
+      <div className="button mic" onClick={startStopAudio}>
         <i className="fa fa-microphone"></i>
         <div className="btn-text">{micText}</div>
       </div>
       {caretOpen ? (
         <ActionButtonCaretDropDown
-          defaultValue={callStatus.audioDevice || "default"}
+          defaultValue={`audioinput-${callStatus.audioDevice || "default"}`}
           changeHandler={changeAudioDevice}
           devicesList={audioDevicesList}
           type="audio"
