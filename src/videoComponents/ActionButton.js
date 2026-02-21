@@ -7,7 +7,8 @@
 import { useState, useEffect, useRef } from "react"
 // import { useDispatch, useSelector } from 'react-redux';
 import HangupButton from "./HangupButton"
-import socket from "../webRTCutilities/socketConnect"
+import ScreenShareButton from "./ScreenShareButton"
+import RecordButton from "./RecordButton"
 import { useSelector } from "react-redux"
 import VideoButton from "./VideoButton/VideoButton"
 import AudioButton from "./AudioButton/AudioButton"
@@ -18,7 +19,7 @@ import AudioButton from "./AudioButton/AudioButton"
  * @param {Function} props.openCloseChat - 打开/关闭聊天窗口的函数
  * @param {Object} props.smallFeedEl - React ref，指向小窗口视频元素
  */
-const ActionButtons = ({ openCloseChat, smallFeedEl }) => {
+const ActionButtons = ({ openCloseChat = () => {}, smallFeedEl }) => {
   // 从 Redux store 获取通话状态
   const callStatus = useSelector((state) => state.callStatus)
   // 菜单按钮容器的引用
@@ -91,12 +92,9 @@ const ActionButtons = ({ openCloseChat, smallFeedEl }) => {
           </div>
         </div>
         {/* 屏幕共享按钮 */}
-        <div className="button-no-caret participants d-inline-block">
-          <div className="button participants">
-            <i className="fa fa-desktop"></i>
-            <div className="btn-text">Share Screen</div>
-          </div>
-        </div>
+        <ScreenShareButton smallFeedEl={smallFeedEl} />
+        {/* 录制按钮 */}
+        <RecordButton />
       </div>
 
       {/* 右侧按钮组：挂断按钮 */}

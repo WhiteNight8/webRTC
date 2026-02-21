@@ -10,14 +10,14 @@ import { useEffect, useState } from "react"
 /**
  * CallInfo 组件
  * @param {Object} props - 组件属性
- * @param {Object} props.apptInfo - 预约信息对象
- * @param {string} props.apptInfo.professionalsFullName - 专业人员全名
- * @param {Date|string} props.apptInfo.apptDate - 预约日期时间
+ * @param {Object} props.apptInfo - 预约信息对象（来自 /validate-link）
+ * @param {string} props.apptInfo.professionFullName - 专业人员全名
+ * @param {Date|number} props.apptInfo.appDate - 预约日期时间
  */
 const CallInfo = ({ apptInfo }) => {
   // 使用 moment.js 格式化预约时间的相对时间显示（如 "5 minutes ago"）
   const [momentText, setMomentText] = useState(
-    moment(apptInfo.apptDate).fromNow()
+    moment(apptInfo.appDate).fromNow()
   )
 
   /**
@@ -26,21 +26,17 @@ const CallInfo = ({ apptInfo }) => {
    */
   useEffect(() => {
     const timeInterval = setInterval(() => {
-      // 更新相对时间文本
-      setMomentText(moment(apptInfo.apptDate).fromNow())
+      setMomentText(moment(apptInfo.appDate).fromNow())
     }, 5000)
     
     // 组件卸载时清除定时器
-    return () => {
-      console.log("Clearing")
-      clearInterval(timeInterval)
-    }
-  }, [])
+    return () => clearInterval(timeInterval)
+  }, [apptInfo.appDate])
 
   return (
     <div className="call-info">
       <h1>
-        {apptInfo.professionalsFullName} has been notified.
+        {apptInfo.professionFullName} has been notified.
         <br />
         Your appointment is {momentText}.
       </h1>

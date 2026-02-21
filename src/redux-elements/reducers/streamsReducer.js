@@ -22,8 +22,7 @@ export default (state = {}, action) => {
     copyState[action.payload.who] = action.payload
     return copyState
   } 
-  // 登出时清空所有流
-  else if (action.type === "LOGOUT_ACTION") {
+  else if (action.type === "LOGOUT_ACTION" || action.type === "END_CALL") {
     return {}
   } 
   // 其他 action 不改变状态

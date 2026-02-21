@@ -71,7 +71,7 @@ const VideoButton = ({ smallFeedEl }) => {
       tracks.forEach((t) => {
         t.enabled = true
       })
-    } else if (callStatus.hasMedia) {
+    } else if (callStatus.haveMedia) {
       smallFeedEl.current.srcObject = streams.localStream.stream
 
       startLocalStream(streams, dispatch)

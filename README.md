@@ -1,70 +1,45 @@
-# Getting Started with Create React App
+# Telelegal 前端
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+基于 React 19 + Redux + WebRTC 的视频通话客户端，支持客户预约链接与专业人员仪表盘。
 
-## Available Scripts
+## 功能
 
-In the project directory, you can run:
+- **首页** `/`：欢迎页
+- **客户视频页** `/join-video?token=xxx`：客户通过预约链接进入视频通话
+- **专业人员仪表盘** `/dashboard?token=xxx`：查看预约列表，点击 Join 加入通话
+- **专业人员视频页** `/join-video-pro?token=xxx&uuid=...`：专业人员加入后的视频界面
+- **屏幕共享**：共享屏幕（getDisplayMedia）
+- **聊天**：实时文本消息
+- **挂断**：关闭连接、停止流、返回首页
 
-### `npm start`
+## 配置
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+复制 `.env.example` 为 `.env`，可设置 `REACT_APP_API_BASE` 覆盖后端地址。
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 技术栈
 
-### `npm test`
+- React 19、Redux 5、react-router-dom 7
+- Socket.IO Client（信令）
+- WebRTC（getUserMedia、RTCPeerConnection）
+- Axios、moment.js
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 安装与运行
 
-### `npm run build`
+```bash
+npm install
+npm start
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+需配置 HTTPS 证书（见 package.json 的 start 脚本）。前端地址：`https://localhost:3000`。
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 项目结构
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+src/
+├── App.js                 # 根组件、路由配置
+├── index.js               # 入口、Redux Provider
+├── redux-elements/        # Redux 状态（callStatus、streams）
+├── webRTCutilities/       # createPeerConnection、socketConnect、socketConnection、proSocketListeners
+├── videoComponents/       # MainVideoPage、CallInfo、ChatWindow、ActionButtons 等
+└── siteComponents/        # ProDashboard
+```

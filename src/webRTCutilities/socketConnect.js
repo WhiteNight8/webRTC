@@ -5,9 +5,8 @@
  */
 
 import { io } from "socket.io-client"
+import { API_BASE } from "../config"
 
-// 连接到后端 Socket.IO 服务器
-// 该连接用于 WebRTC 信令：交换 SDP、ICE 候选等信息
-const socket = io.connect("https://localhost:9000")
+const socket = io(API_BASE)
 
 export default socket

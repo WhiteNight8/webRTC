@@ -46,8 +46,11 @@ export default (state = initState, action) => {
     copyState[action.payload.prop] = action.payload.value
     return copyState
   }
-  // 登出或新版本时重置为初始状态
-  else if (action.type === "LOGOUT_ACTION" || action.type === "NEW_VERSION") {
+  else if (
+    action.type === "LOGOUT_ACTION" ||
+    action.type === "NEW_VERSION" ||
+    action.type === "END_CALL"
+  ) {
     return initState
   }
   // 其他 action 不改变状态
