@@ -1,4 +1,7 @@
-// this is where we create the express and socketio server
+/**
+ * 服务入口：创建 HTTPS + Express + Socket.IO 服务器
+ * 为前端提供 API 与 WebSocket 信令
+ */
 
 const fs = require("fs")
 const https = require("https")
@@ -12,6 +15,7 @@ app.use(cors())
 app.use(express.static(__dirname + "/public"))
 app.use(express.json())
 
+// 读取 HTTPS 证书（开发环境自签名证书）
 const key = fs.readFileSync("./certs/create-cert-key.pem")
 const cert = fs.readFileSync("./certs/create-cert.pem")
 

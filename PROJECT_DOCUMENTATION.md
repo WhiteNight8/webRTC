@@ -1,182 +1,194 @@
-# WebRTC 项目详细文档（面试与求职向）
+# Telelegal WebRTC 项目 · 面试文档
 
-本文档面向**面试准备**与**求职材料**，帮助你清晰介绍项目架构、技术选型与实现细节，并回答常见技术问题。
-
----
-
-## 一、项目定位与业务场景
-
-- **项目名称**：WebRTC 视频通话应用（Telelegal 前端/全栈）
-- **一句话介绍**：基于 WebRTC 与 Socket.IO 的实时视频通话 Web 应用，支持 JWT 预约链接校验、本地/远程视频流管理、音视频控制与聊天 UI，适用于远程法律咨询等场景。
-- **可强调的能力**：实时音视频、P2P 连接、信令设计、React 状态管理、前后端分离、HTTPS 与安全实践。
+面向**求职面试**与**作品集**的项目说明，帮助你在面试中清晰介绍架构、技术实现与业务价值。
 
 ---
 
-## 二、技术架构总览
+## 一、项目概览
 
-### 2.1 整体架构图（口述时可画）
+### 1.1 一句话介绍
 
-```
-[ 浏览器 ]  <--HTTPS/WSS-->  [ Node 后端 :9000 ]
-    |                              |
-    |  getUserMedia / RTCPeerConnection (WebRTC)
-    |  Redux (streams, callStatus)
-    v
-[ 本地/远程视频 UI、控制栏、聊天、预约信息 ]
-```
+**基于 WebRTC 与 Socket.IO 的实时视频通话 Web 应用**，支持客户/专业人员双角色、JWT 预约链接、端到端 P2P 视频、屏幕共享、录制、实时聊天，适用于远程法律咨询等 B2B 场景。
 
-- **前端**：React 单页应用，Redux 管理“流”与“通话状态”，WebRTC 负责采集与 P2P 传输。
-- **后端**：Express 提供 REST（如 `/validate-link`）与静态资源；Socket.IO 提供 WebSocket，用于 WebRTC 信令（SDP/ICE）。
-- **安全**：全站 HTTPS；预约链接使用 JWT 签名与验证，防止篡改。
+### 1.2 核心竞争力关键词
 
-### 2.2 技术选型理由（面试可答）
+- 实时音视频 · WebRTC · P2P
+- Socket.IO 信令 · SDP/ICE 交换
+- React 19 · Redux · 前后端分离
+- JWT 鉴权 · HTTPS · 安全性
 
-| 选型 | 原因 |
+### 1.3 功能清单
+
+| 模块 | 功能 |
 |------|------|
-| **WebRTC** | 浏览器原生、低延迟、支持 P2P，适合实时音视频，无需插件。 |
-| **Socket.IO** | 封装 WebSocket，自动重连、房间/命名空间方便扩展，与 Express 集成简单。 |
-| **Redux** | 通话状态（当前状态、音视频开关、是否有媒体）和流对象（localStream、remote1…）多处组件共享，集中管理便于调试和扩展。 |
-| **STUN（Google）** | 帮助在 NAT 后获取公网地址，多数场景下仅 STUN 即可建立连接；若需高穿透率可后续加 TURN。 |
-| **JWT** | 无状态、易扩展；预约链接带 token，后端验证即可识别会话与权限。 |
+| 视频通话 | 客户创建 offer，专业人员 answer，完整 SDP/ICE 交换 |
+| 媒体控制 | 视频开关、音频静音、设备切换 |
+| 屏幕共享 | getDisplayMedia + replaceTrack |
+| 录制 | MediaRecorder 录制远程流，支持下载 webm |
+| 聊天 | Socket.IO 实时文本消息 |
+| 专业人员仪表盘 | 等待接听、预约列表、日历、设置 |
+| 预约系统 | JWT 链接生成与校验 |
 
 ---
 
-## 三、核心模块与数据流
+## 二、技术架构
 
-### 3.1 前端核心模块
+### 2.1 整体架构图
 
-| 模块 | 路径/文件 | 职责 |
-|------|-----------|------|
-| 入口与状态 | `index.js` | 创建 Redux store（rootReducer），Provider 包裹 App。 |
-| 路由 | `App.js` | `/` 首页，`/join-video` 视频页（MainVideoPage）。 |
-| 视频页 | `MainVideoPage.js` | 挂载时 getUserMedia、createPeerConnection、addStream；请求 `/validate-link` 拿预约信息；渲染大小窗口、CallInfo、ChatWindow、ActionButtons。 |
-| 对等连接 | `createPeerConnection.js` | 使用 STUN 配置创建 RTCPeerConnection，监听 signalingstatechange、icecandidate，返回 peerConnection + remoteStream。 |
-| 本地流共享 | `startLocalStream.js` | 将本地流的视频轨道通过 `addTrack` 加到各个远程 peerConnection 上。 |
-| 本地音频共享 | `startAudioStream.js` | 将本地流的音频轨道通过 `addTrack` 加到各个远程 peerConnection 上；用于首次点击「Join Audio」。 |
-| 信令连接 | `socketConnect.js` | Socket.IO 客户端连接 `https://localhost:9000`，供后续 SDP/ICE 交换使用。 |
-| STUN 配置 | `stunServer.js` | 提供 `iceServers`（如 stun.l.google.com:19302）。 |
-| 流状态 | `streamsReducer.js` | 存储 `localStream`、`remote1`… 及对应 MediaStream、RTCPeerConnection。 |
-| 通话状态 | `callStatusReducer.js` | current、video、audio、haveMedia、shareScreen 等。 |
-| 操作栏 | `ActionButton.js` | 整合音频、视频、参与者、聊天、屏幕共享、挂断；鼠标移动显示/4 秒无操作隐藏。 |
-| 音频按钮 | `AudioButton.js` | Join Audio / Mute / Unmute；设备切换（麦克风、扬声器）；调用 startAudioStream、changeAudioDevice。 |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        浏览器 (React SPA)                         │
+├─────────────────────────────────────────────────────────────────┤
+│  MainVideoPage / ProDashboard                                    │
+│  ├── getUserMedia (本地媒体)                                      │
+│  ├── RTCPeerConnection (WebRTC P2P)                              │
+│  ├── Redux (streams, callStatus)                                 │
+│  └── Socket.IO Client (信令)                                     │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTPS / WSS
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Node 后端 (Express + Socket.IO)                │
+│  ├── REST: /user-link, /pro-link, /validate-link (JWT)           │
+│  └── Socket: newOffer, newAnswer, iceCandidate, chatMessage      │
+└─────────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+              [ STUN: Google 公共服务器 ]
+              [ 可选: TURN 中继 ]
+```
 
-### 3.2 后端核心模块
+### 2.2 技术选型与理由
 
-| 模块 | 文件 | 职责 |
+| 选型 | 理由 |
+|------|------|
+| **WebRTC** | 浏览器原生、低延迟、P2P 直连，无需插件，适合实时音视频 |
+| **Socket.IO** | 封装 WebSocket，自动重连、房间/命名空间易扩展，与 Express 集成方便 |
+| **Redux** | 流与通话状态多组件共享，集中管理便于调试和扩展 |
+| **JWT** | 无状态、易扩展，预约链接防篡改 |
+| **STUN** | NAT 穿透，获取公网地址；生产可加 TURN 提高接通率 |
+
+---
+
+## 三、核心流程（口述版）
+
+### 3.1 客户 → 专业人员 通话建立
+
+1. 客户打开 `/join-video?token=xxx`，获取媒体、创建 RTCPeerConnection
+2. 客户点击「Start Video」后，创建 offer，`socket.emit("newOffer", { offer, appInfo })`
+3. 后端根据 `professionFullName` 转发给对应专业人员
+4. 专业人员 Dashboard 收到 newOffer，显示「等待接听」，点击「加入通话」
+5. 专业人员进入 `/join-video-pro`，`setRemoteDescription(offer)`，创建 answer，`emit("newAnswer")`
+6. 客户收到 answer，`setRemoteDescription(answer)`
+7. 双方交换 ICE 候选，`addIceCandidate`，完成 P2P 连接
+
+### 3.2 信令事件一览
+
+| 事件 | 方向 | 作用 |
 |------|------|------|
-| 服务与 Socket | `server.js` | HTTPS（证书）、Express、CORS、静态资源；Socket.IO 挂载在同一端口，监听 9000。 |
-| 路由与 JWT | `expressRouter.js` | `GET /user-link` 生成带 JWT 的 join-video 链接；`POST /validate-link` 校验 token 并返回预约数据。 |
-
-### 3.3 关键数据流（便于口述）
-
-1. **进入视频页**  
-   - 用户打开 `/join-video?token=xxx`。  
-   - MainVideoPage 的 useEffect：`getUserMedia({ video: true, audio: false })` → `addStream('localStream', stream)`；`createPeerConnection()` → `addStream('remote1', remoteStream, peerConnection)`；并请求 `POST /validate-link` 得到预约信息。
-
-2. **视频开/关**  
-   - 用户点“Start/Stop Video”。  
-   - VideoButton 从 Redux 取 streams、callStatus；若有 haveMedia 和 localStream，则把 `streams.localStream.stream` 设到 smallFeedEl，并调用 `startLocalStream(streams, dispatch)` 把本地视频轨道 addTrack 到各 remote 的 peerConnection，同时 dispatch `updateCallStatus('video', 'enabled')`。
-
-3. **音频加入/静音**  
-   - 用户点「Join Audio」。  
-   - AudioButton 调用 `changeAudioDevice({ target: { value: "input-default" } })` 获取默认麦克风流，`addStream('localStream', stream)` 写入 Redux，再调用 `startAudioStream(streams, dispatch)` 把本地音频轨道 addTrack 到各 remote 的 peerConnection，dispatch `updateCallStatus('audio', 'enabled')`。  
-   - 静音：将音频轨道的 `enabled` 设为 false；取消静音：设回 true，并 dispatch 更新状态。
-
-4. **挂断**  
-   - HangupButton 里 dispatch `updateCallStatus('current', 'complete')`，通话状态变为完成，按钮根据 callStatus.current 隐藏。
+| newOffer | 客户 → 后端 → 专业人员 | 传递 SDP offer |
+| newAnswer | 专业人员 → 后端 → 客户 | 传递 SDP answer |
+| iceCandidate | 双向 | 传递 ICE 候选，未连接时缓存 |
+| chatMessage | 双向 | 文本聊天 |
+| peerDisconnected | 后端 → 对端 | 对方断开通知 |
 
 ---
 
-## 四、WebRTC 与信令（面试高频）
+## 四、WebRTC 要点（面试高频）
 
-### 4.1 WebRTC 在本项目中的使用
+### 4.1 建立流程
 
-- **getUserMedia**：获取本地摄像头（及可选的麦克风）MediaStream。  
-- **RTCPeerConnection**：创建对等连接，配置 STUN；`addTrack` 发送本地轨道；`ontrack`（若已接）接收远端轨道到 MediaStream。  
-- **SDP / ICE**：标准流程是 A 创建 offer → B 收 offer 并 create answer → 双方交换 ICE candidate；本项目已搭好 Socket 与 RTCPeerConnection，ICE 在 createPeerConnection 中打印，发送到对端为 TODO，可说明“信令通道已就绪，完整一对一需实现 offer/answer 与 ICE 的收发”。
+1. **信令**：通过 Socket.IO 交换 SDP offer/answer、ICE 候选  
+2. **配置**：双方 `setRemoteDescription`、`addIceCandidate`  
+3. **媒体**：`addTrack` 发送轨道，`ontrack` 接收轨道  
+4. **P2P**：协商完成后媒体直连，不经过服务器
 
-### 4.2 信令的作用
+### 4.2 为什么需要信令？
 
-- 交换 **SDP（offer/answer）**：描述媒体能力与编码方式。  
-- 交换 **ICE 候选**：描述本端可用的传输地址，便于在 NAT 下建立最佳路径。  
-- 本项目使用 **Socket.IO** 作为信令通道，与业务 API 共用同一 HTTPS 后端，便于部署与鉴权。
+WebRTC 只管媒体传输和加密，不管「谁和谁通话」。信令负责交换连接所需信息（SDP、ICE）和业务数据（房间号、身份）。
 
-### 4.3 STUN / TURN 简述
+### 4.3 STUN vs TURN
 
-- **STUN**：帮助终端发现自己在 NAT 后的公网 IP:端口，多数家庭/办公网络下足够建立 P2P。  
-- **TURN**：当 P2P 无法建立时，通过中继服务器转发媒体流，保证连通性但增加延迟与带宽成本。  
-- 本项目仅配置 STUN（Google 公共服务器），可说明“生产环境可增加 TURN 以提升穿透率”。
+- **STUN**：帮助获取公网地址，多数场景下可建立 P2P  
+- **TURN**：P2P 失败时做中继转发，保证连通性，但增加延迟和带宽成本  
+- 项目当前用 STUN；生产环境建议配置 TURN 提高穿透率
 
----
+### 4.4 录制实现
 
-## 五、Redux 设计（面试可讲）
-
-- **streams**（streamsReducer）：  
-  - 以 `who` 为 key（如 `localStream`、`remote1`），存 `{ stream, peerConnection? }`。  
-  - 便于多处组件共享同一流与连接，并支持多路远程流扩展。
-
-- **callStatus**（callStatusReducer）：  
-  - 集中管理 current（idle/negotiating/progress/complete）、video/audio 状态、haveMedia、设备选择等。  
-  - 控制栏、挂断、视频按钮等只读 callStatus 或 dispatch updateCallStatus，逻辑清晰。
-
-- **可扩展点**：  
-  - 可加 middleware 做日志或持久化；可拆分为 slice（Redux Toolkit）以简化样板代码。
+使用 `MediaRecorder` API，将远程流（及可选本地音频）合入 `MediaStream`，按秒切片 `ondataavailable`，`onstop` 时生成 Blob 并触发下载。
 
 ---
 
-## 六、常见面试问题与参考答案
+## 五、项目亮点（简历/自我介绍）
 
-**Q1：WebRTC 的建立流程是怎样的？**  
-A：先通过信令服务器（本项目用 Socket.IO）交换 SDP offer/answer 和 ICE 候选；双方用这些信息配置 RTCPeerConnection，完成 NAT 穿透和媒体协商；之后媒体流直接 P2P 传输，不经过服务器。
-
-**Q2：为什么需要信令？WebRTC 不能自己发现对方吗？**  
-A：WebRTC 只负责媒体传输和加密，不负责“谁和谁通话”。信令用来交换连接所需的信息（SDP、ICE）以及业务逻辑（如房间号、身份），因此需要额外通道（如 WebSocket/Socket.IO）。
-
-**Q3：STUN 和 TURN 的区别？**  
-A：STUN 帮助获取公网地址，用于 P2P 建立；TURN 在 P2P 失败时作为中继转发媒体，保证连通性但占用服务器带宽。
-
-**Q4：项目中 Redux 存了哪些状态？**  
-A：主要有两块：streams 存各路媒体流及对应的 RTCPeerConnection；callStatus 存当前通话阶段、音视频开关、是否已获取媒体等，供控制栏和挂断等组件使用。
-
-**Q5：如何保证预约链接安全？**  
-A：链接中带 JWT token，后端用密钥验证签名并解析出预约信息；未经验证的 token 无法通过 `/validate-link`，防止伪造或篡改。
-
-**Q6：前后端为什么用 HTTPS？**  
-A：getUserMedia 等 API 在生产环境通常要求安全上下文；WebSocket（Socket.IO）在 HTTPS 下为 WSS，避免被中间人篡改信令。
+1. **完整 WebRTC 链路**：offer/answer、ICE 交换、ontrack、addIceCandidate 全流程
+2. **双角色设计**：客户与专业人员使用不同 Socket 与流程
+3. **信令与业务结合**：按 professionFullName 路由，ICE 缓存与重发
+4. **屏幕共享**：getDisplayMedia + replaceTrack 无缝切换
+5. **录制**：MediaRecorder 本地录制与下载
+6. **Error Boundary**：组件级错误隔离，避免整页白屏
+7. **前后端分离**：REST + WebSocket，JWT 鉴权，配置化 API 地址
 
 ---
 
-## 七、项目亮点（简历/自我介绍可用）
+## 六、常见面试题与参考答案
 
-- 使用 **WebRTC** 实现浏览器端实时音视频采集与 P2P 传输，理解 SDP、ICE 与信令流程。  
-- 使用 **Socket.IO** 搭建信令通道，与 Express 后端集成，为多端协商与扩展留好接口。  
-- 使用 **Redux** 统一管理媒体流与通话状态，组件职责清晰，便于维护和扩展。  
-- 使用 **JWT** 实现预约链接的生成与校验，前后端分离，具备基本安全意识。  
-- **React 19**、**React Router 7**、**Redux 5** 等较新栈，体现学习与工程实践能力。  
-- 具备**全栈视角**：前端 React + 状态管理 + WebRTC，后端 Express + Socket.IO + HTTPS + JWT。
+**Q1：WebRTC 建立连接的大致步骤？**  
 
----
+A：通过信令交换 SDP offer/answer；双方配置 `setRemoteDescription`；交换 ICE 候选并 `addIceCandidate`；`addTrack` 发送轨道，`ontrack` 接收；协商完成后媒体走 P2P。
 
-## 八、可优化与扩展（体现思考）
+**Q2：ICE 候选是什么？为什么要交换？**  
 
-- **信令完善**：在 Socket 上实现 offer/answer 与 ICE 候选的收发，完成端到端一对一通话。  
-- **多人与房间**：用 Socket 房间或 namespace 管理多人，为每个远端创建独立 RTCPeerConnection 并维护在 streams 中。  
-- **TURN**：在复杂网络下配置 TURN 服务器，提高接通率。  
-- **错误与重连**：对 getUserMedia、RTCPeerConnection 失败做提示与重试；Socket 断线重连后重新协商。  
-- **预约字段统一**：后端返回字段与前端 CallInfo 命名一致（或做一层映射），避免展示异常。  
-- **TypeScript / 单元测试**：对关键工具函数与 reducer 加测试；用 TS 约束流与状态结构，减少运行时错误。
+A：ICE 候选是本端可用的传输地址（IP:端口）。双方需要知道对方的候选才能找到可连通路径，尤其在 NAT 环境下。
 
----
+**Q3：项目中 Redux 存了什么？**  
 
-## 九、简历/作品集描述建议
+A：`streams` 存各 MediaStream 及对应 RTCPeerConnection；`callStatus` 存通话阶段、音视频状态、haveMedia、haveCreatedOffer 等，供控制栏和视频按钮使用。
 
-**项目名称**：WebRTC 实时视频通话应用（Telelegal）
+**Q4：如何保证预约链接安全？**  
 
-**技术栈**：React, Redux, WebRTC, Socket.IO, Express, Node.js, JWT, HTTPS
+A：链接带 JWT token，后端用密钥验证签名；`/validate-link` 只接受合法 token，防止伪造与篡改。
 
-**描述示例**：  
-负责前端设计与实现，基于 WebRTC 实现实时音视频采集与 P2P 传输，使用 Socket.IO 完成信令通道搭建，Redux 管理媒体流与通话状态；参与后端接口设计，使用 JWT 校验预约链接并返回预约信息。项目采用前后端分离与 HTTPS 部署，具备扩展为多人会议与 TURN 中继的能力。
+**Q5：为什么必须用 HTTPS？**  
+
+A：`getUserMedia` 等 API 要求安全上下文；WSS 在 HTTPS 下工作，避免信令被中间人篡改。
+
+**Q6：如何扩展为多人会议？**  
+
+A：为每个远端维护独立 RTCPeerConnection；用 Socket 房间管理参与者；客户对每个专业人员创建 offer，或使用 MCU/SFU 架构。
 
 ---
 
-以上内容可直接用于准备面试问答、简历撰写和作品集说明；可根据实际面试岗位（前端偏多 / 全栈 / 音视频方向）适当裁剪或展开对应章节。
+## 七、可优化方向（体现思考）
+
+- **TURN 部署**：复杂网络下提升接通率  
+- **重连与 ICE 重启**：断线后自动重新协商  
+- **单元测试**：对 reducer、工具函数、信令逻辑做测试  
+- **TypeScript**：类型约束降低运行时错误  
+- **Docker / CI**：便于部署和自动化构建  
+
+---
+
+## 八、简历描述建议
+
+**项目名称**：WebRTC 实时视频通话应用（Telelegal）  
+
+**技术栈**：React 19, Redux, WebRTC, Socket.IO, Express, Node.js, JWT, MediaRecorder  
+
+**描述**：  
+基于 WebRTC 实现端到端 P2P 视频通话，完成 SDP offer/answer 与 ICE 候选的完整信令设计；实现屏幕共享、通话录制、实时聊天；搭建专业人员仪表盘（等待接听、日历、设置）；使用 JWT 校验预约链接，前后端分离并支持配置化部署。项目具备扩展为多人会议与 TURN 中继的能力。
+
+---
+
+## 九、面试表述话术
+
+**开场（30 秒）**：  
+「这是一个基于 WebRTC 的实时视频通话项目，支持客户通过预约链接发起通话，专业人员从仪表盘接听。我负责端到端实现，包括 WebRTC 信令设计、双角色流程、屏幕共享和录制功能。」
+
+**技术深挖**：  
+- 信令：可画 offer → answer → ICE 交换的时序  
+- Redux：可说明 streams 与 callStatus 的职责划分  
+- 安全：可说明 JWT、HTTPS、WSS 的使用场景  
+
+**收尾**：  
+「项目已经跑通完整流程，后续可以考虑加 TURN、多人会议和自动化测试，作为生产级项目打磨。」

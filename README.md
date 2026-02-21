@@ -63,9 +63,9 @@ webRTC/
 ```bash
 cd telelegaL-back-end
 npm install
-# 确保项目根目录或 certs 目录下有 create-cert-key.pem、create-cert.pem（HTTPS）
-node server.js
-# 或使用 nodemon 开发
+# 确保 certs/ 目录下有 create-cert-key.pem、create-cert.pem（HTTPS）
+npm start
+# 或 node index.js
 ```
 
 服务默认：`https://localhost:9000`。
@@ -80,11 +80,13 @@ npm start
 ```
 
 前端默认：`https://localhost:3000`。  
-视频页地址：`https://localhost:3000/join-video?token=<JWT>`。
+- 客户视频页：`https://localhost:3000/join-video?token=<JWT>`
+- 专业人员仪表盘：`https://localhost:3000/dashboard?token=<JWT>`
 
-### 获取带 token 的链接
+### 获取链接
 
-访问后端：`GET https://localhost:9000/user-link`，返回带 `token` 的完整 `/join-video` 链接，用该链接进入视频页。
+- 客户链接：`GET https://localhost:9000/user-link`
+- 专业人员链接：`GET https://localhost:9000/pro-link`
 
 ---
 
@@ -112,8 +114,8 @@ npm start
 ## 注意事项
 
 - 前后端均使用 HTTPS；本地开发需自签名证书（如 `certs/create-cert.pem`、`create-cert-key.pem`）。
-- 后端返回的预约字段为 `professionFullName`、`appDate`；前端 CallInfo 使用 `professionalsFullName`、`apptDate`，若展示异常需统一字段名或做一层映射。
-- 当前 ICE 候选仅打印，未通过 Socket 发送给对端，完整一对一通话需实现信令交换（offer/answer + ICE）。
+- 后端返回的预约字段为 `professionFullName`、`appDate`；前端已统一使用这些字段名。
+- 信令已实现：offer/answer、ICE 候选、聊天、断开通知；支持录制、屏幕共享、Error Boundary。
 
 ---
 
